@@ -4,19 +4,25 @@
   <PropertyGroup>
     <TargetFrameworks>net452;netstandard2.0;netstandard2.1</TargetFrameworks>
     <LangVersion>8.0</LangVersion>
+    <PackageId>Peakflames.SharpBucket</PackageId>
     <Version>0.17.0</Version>
-    <Authors>Mitja Bezenšek, Mickaël Nivet</Authors>
-    <Company>Mitja Bezenšek</Company>
-    <Product>SharpBucket</Product>
+    <Authors>Mitja Bezenšek, Mickaël Nivet, Peakflames</Authors>
+    <Company>Peakflames</Company>
+    <Product>SharpBucket (peakflames fork)</Product>
     <Copyright>Copyright 2014-2021</Copyright>
-    <PackageProjectUrl>https://github.com/MitjaBezensek/SharpBucket</PackageProjectUrl>
-    <PackageIconUrl>http://bezensek.com/favicon.png</PackageIconUrl>
-    <PackageIcon>icon.png</PackageIcon>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <Description>A .Net wrapper for the Bitbucket REST API.</Description>
-    <PackageDescription>SharpBucket is a .Net wrapper (written in c#) for the Bitbucket's REST API. With it you can have all the data of your repositories / issues at your fingertips.</PackageDescription>
+    <Description>A .Net wrapper for the Bitbucket REST API. Fork of MitjaBezensek/SharpBucket.</Description>
+    <PackageDescription>SharpBucket is a .Net wrapper (written in c#) for the Bitbucket's REST API. With it you can have all the data of your repositories / issues at your fingertips. This is the peakflames fork of MitjaBezensek/SharpBucket.</PackageDescription>
     <PackageTags>Bitbucket REST API C#</PackageTags>
-    <PackageReleaseNotes>https://github.com/MitjaBezensek/SharpBucket/releases/tag/$(Version)</PackageReleaseNotes>
+    <PackageProjectUrl>https://github.com/peakflames/SharpBucket</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/peakflames/SharpBucket</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>https://github.com/peakflames/SharpBucket/releases/tag/v$(Version)</PackageReleaseNotes>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>icon.png</PackageIcon>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
@@ -32,6 +38,7 @@
 
   <ItemGroup>
     <PackageReference Include="RestSharp" Version="106.12.0" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net452'">

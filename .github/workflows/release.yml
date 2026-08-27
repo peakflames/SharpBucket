@@ -1,0 +1,175 @@
+name: Release to NuGet
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_version:
+        description: 'Release version (e.g. 0.17.1)'
+        required: true
+        type: string
+      changelog_entry:
+        description: 'One-line release summary'
+        required: true
+        type: string
+      next_dev_version:
+        description: 'Next development version (e.g. 0.17.2)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  PROJECT_PATH: SharpBucket/SharpBucket.csproj
+  PACKAGE_OUTPUT_DIR: ./nuget-packages
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout develop
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: develop
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Configure git identity
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Update version in csproj
+      env:
+        NEW_VERSION: ${{ inputs.new_version }}
+      run: |
+        sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" "${PROJECT_PATH}"
+
+    - name: Prepend changelog entry
+      env:
+        NEW_VERSION: ${{ inputs.new_version }}
+        CHANGELOG_ENTRY: ${{ inputs.changelog_entry }}
+      run: |
+        if grep -q "^## ${NEW_VERSION}$" CHANGELOG.md; then
+          echo "Changelog entry for ${NEW_VERSION} already exists, skipping."
+        else
+          TEMP=$(mktemp)
+          printf '## %s\n\n- %s\n\n' "$NEW_VERSION" "$CHANGELOG_ENTRY" | cat - CHANGELOG.md > "$TEMP"
+          mv "$TEMP" CHANGELOG.md
+        fi
+
+    - name: Restore
+      run: dotnet restore "${PROJECT_PATH}"
+
+    - name: Build validation
+      run: dotnet build "${PROJECT_PATH}" -c Release --no-restore
+
+    - name: Commit release changes to develop
+      env:
+        NEW_VERSION: ${{ inputs.new_version }}
+        CHANGELOG_ENTRY: ${{ inputs.changelog_entry }}
+      run: |
+        git add "${PROJECT_PATH}" CHANGELOG.md
+        git diff --cached --quiet || git commit -m "Release v${NEW_VERSION}: ${CHANGELOG_ENTRY}"
+        git push origin develop
+
+    - name: Merge develop into main
+      env:
+        NEW_VERSION: ${{ inputs.new_version }}
+        CHANGELOG_ENTRY: ${{ inputs.changelog_entry }}
+      run: |
+        git fetch origin main:main
+        git checkout main
+        if git merge-base --is-ancestor develop main; then
+          echo "develop already merged into main, skipping."
+        else
+          git merge develop --no-ff -m "Release v${NEW_VERSION}: ${CHANGELOG_ENTRY}"
+          git push origin main
+        fi
+
+    - name: Create and push release tag
+      env:
+        NEW_VERSION: ${{ inputs.new_version }}
+        CHANGELOG_ENTRY: ${{ inputs.changelog_entry }}
+      run: |
+        if git rev-parse "v${NEW_VERSION}" >/dev/null 2>&1; then
+          echo "Tag v${NEW_VERSION} already exists, skipping."
+        else
+          git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}: ${CHANGELOG_ENTRY}"
+          git push origin "v${NEW_VERSION}"
+        fi
+
+    - name: Bump develop to next dev version
+      env:
+        NEXT_DEV_VERSION: ${{ inputs.next_dev_version }}
+      run: |
+        git checkout develop
+        CURRENT=$(grep -o '<Version>[^<]*</Version>' "${PROJECT_PATH}" | sed 's|<[^>]*>||g')
+        if [ "$CURRENT" = "$NEXT_DEV_VERSION" ]; then
+          echo "Already at v${NEXT_DEV_VERSION}, skipping bump."
+        else
+          sed -i "s|<Version>.*</Version>|<Version>${NEXT_DEV_VERSION}</Version>|" "${PROJECT_PATH}"
+        fi
+
+    - name: Prepend TBD changelog entry
+      env:
+        NEXT_DEV_VERSION: ${{ inputs.next_dev_version }}
+      run: |
+        if grep -q "^## ${NEXT_DEV_VERSION}$" CHANGELOG.md; then
+          echo "Changelog entry for ${NEXT_DEV_VERSION} already exists, skipping."
+        else
+          TEMP=$(mktemp)
+          printf '## %s\n\n- TBD\n\n' "$NEXT_DEV_VERSION" | cat - CHANGELOG.md > "$TEMP"
+          mv "$TEMP" CHANGELOG.md
+        fi
+
+    - name: Commit and push develop version bump
+      env:
+        NEXT_DEV_VERSION: ${{ inputs.next_dev_version }}
+      run: |
+        git add "${PROJECT_PATH}" CHANGELOG.md
+        git diff --cached --quiet || git commit -m "(chore) bump version to v${NEXT_DEV_VERSION} (develop)"
+        git push origin develop
+
+    - name: Pack NuGet package
+      env:
+        NEW_VERSION: ${{ inputs.new_version }}
+      run: |
+        git checkout "v${NEW_VERSION}"
+        dotnet pack "${PROJECT_PATH}" -c Release /p:Version=${NEW_VERSION} /p:ContinuousIntegrationBuild=true -o "${PACKAGE_OUTPUT_DIR}"
+
+    - name: Publish to NuGet.org
+      run: |
+        dotnet nuget push ${PACKAGE_OUTPUT_DIR}/*.nupkg \
+          --source https://api.nuget.org/v3/index.json \
+          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --skip-duplicate
+        dotnet nuget push ${PACKAGE_OUTPUT_DIR}/*.snupkg \
+          --source https://api.nuget.org/v3/index.json \
+          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --skip-duplicate
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ inputs.new_version }}
+        name: Release v${{ inputs.new_version }}
+        draft: false
+        prerelease: ${{ contains(inputs.new_version, '-alpha') || contains(inputs.new_version, '-beta') || contains(inputs.new_version, '-rc') }}
+        body: |
+          ## NuGet Package
+          This release has been published to NuGet.org
+
+          **Package:** Peakflames.SharpBucket v${{ inputs.new_version }}
+          **Install:** `dotnet add package Peakflames.SharpBucket --version ${{ inputs.new_version }}`
+
+          View on NuGet: https://www.nuget.org/packages/Peakflames.SharpBucket/${{ inputs.new_version }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

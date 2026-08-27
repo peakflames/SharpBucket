@@ -24,3 +24,6 @@ _ReSharper*/
 !packages/repositories.config
 /.vs/
 /TestResults/
+*.nupkg
+*.snupkg
+/nuget-packages/

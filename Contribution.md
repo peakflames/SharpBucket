@@ -38,8 +38,8 @@ Just a few guidelines:
 
 # Continuous integration
 
-The project is using AppVeyor's Continuous Integration Service that is free for open source projects. It is enabled for Pull Requests as well as the main branch. Main branch's current status is:
+This fork uses [GitHub Actions](https://github.com/peakflames/SharpBucket/actions) for CI, enabled for pull requests as well as pushes to `develop` and `main`:
 
-[![Build status](https://ci.appveyor.com/api/projects/status/jtlni3j2fq3j6pxy/branch/master)](https://ci.appveyor.com/project/MitjaBezenek/sharpbucket/branch/master)
+[![CI](https://github.com/peakflames/SharpBucket/actions/workflows/ci.yml/badge.svg)](https://github.com/peakflames/SharpBucket/actions/workflows/ci.yml)
 
-The CI service also runs the Integration tests present in the solution. For now this only covers the public parts of the API. If a build fails you can click on the icon and check what went wrong. You can even see if some test fail.
+The CI workflow builds the library across all target frameworks. It does not run the integration tests, since those require live Bitbucket credentials (see above) and create/delete real repositories — see `CLAUDE.md` for details. Run them locally with your own test account before opening a PR that touches API behavior.

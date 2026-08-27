@@ -1,6 +1,8 @@
 # SharpBucket
-[![Build status](https://ci.appveyor.com/api/projects/status/jtlni3j2fq3j6pxy/branch/master?svg=true)](https://ci.appveyor.com/project/MitjaBezenek/sharpbucket/branch/master)
-[![NuGet Version and Downloads count](https://buildstats.info/nuget/SharpBucket)](https://www.nuget.org/packages/SharpBucket/)
+[![CI](https://github.com/peakflames/SharpBucket/actions/workflows/ci.yml/badge.svg)](https://github.com/peakflames/SharpBucket/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/Peakflames.SharpBucket.svg)](https://www.nuget.org/packages/Peakflames.SharpBucket/)
+
+This is the [peakflames](https://github.com/peakflames) fork of [MitjaBezensek/SharpBucket](https://github.com/MitjaBezensek/SharpBucket), published to NuGet as `Peakflames.SharpBucket`. See `CONTRIBUTING.md` for the fork's branch model and release process.
 
 SharpBucket is a .Net wrapper for the [Bitbucket Cloud's REST APIs](https://developer.atlassian.com/bitbucket/api/2/reference/). It is written in in C#. With it you can have all the data of your repositories / issues at your fingertips.
 
@@ -8,7 +10,11 @@ SharpBucket is a .Net wrapper for the [Bitbucket Cloud's REST APIs](https://deve
 ### Installation
 To install SharpBucket, run the following command in the Package Manager Console:
 
-    PM> Install-Package SharpBucket
+    PM> Install-Package Peakflames.SharpBucket
+
+Or with the .NET CLI:
+
+    dotnet add package Peakflames.SharpBucket
 
 ### Usage
 See the [SharpBucketCli Project](https://github.com/MitjaBezensek/SharpBucket/blob/master/SharpBucketCli/Program.cs) or the [unit tests](https://github.com/MitjaBezensek/SharpBucket/tree/master/SharpBucketTests) to see how to use the wrapper.
@@ -102,7 +108,7 @@ With OAuth you can choose between [2 legged and 3 legged authentication](http://
 // authenticate with OAuth keys
 sharpBucket.OAuth1TwoLeggedAuthentication(consumerKey, consumerSecretKey);
 ```
-**The three legged** requires an additional step to retrieve the pin / verifier from Bitbucket. If you do not supply a callback url (or use “oob”) you will be provided with a Bitbucket url that you can use to prompt your user to allow access to your application and retrieve a pin / verifier.
+**The three legged** requires an additional step to retrieve the pin / verifier from Bitbucket. If you do not supply a callback url (or use ï¿½oobï¿½) you will be provided with a Bitbucket url that you can use to prompt your user to allow access to your application and retrieve a pin / verifier.
 
 Here is a simple example of how you could use the pin / verifier retrieved from the browser:
 ```CSharp
@@ -135,8 +141,8 @@ SharpBucket does not yet supply complete coverage of the API. However, the main 
 ## Contributing
 Contributions are always welcome! [Here is some short information](https://github.com/MitjaBezensek/SharpBucket/blob/master/Contribution.md) about how and where to get started.
 
-## Continuous Integration from AppVeyor
-The project is using [AppVeyor's](http://www.appveyor.com/) Continuous Integration Service which is free for open source projects. It is enabled for Pull Requests as well as the main branch.
+## Continuous Integration
+This fork builds via [GitHub Actions](https://github.com/peakflames/SharpBucket/actions), on every push and pull request to `develop` and `main`. Releases to NuGet are published via a separate workflow â€” see `CONTRIBUTING.md`.
 
 ## Licensing, Dependencies and Influence
 SharpBucket is licensed under [MIT license](https://github.com/MitjaBezensek/SharpBucket/blob/master/LICENSE). 
