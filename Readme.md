@@ -135,6 +135,16 @@ OAuth 2.0 offers a large choice of scenarios ([bitbucket OAuth 2.0](https://deve
 sharpBucket.OAuth2ClientCredentials(consumerKey, consumerSecretKey);
 ```
 
+**An already obtained access token** may be used directly, whatever the grant that produced it.
+This is the scenario to use when the authorization code grant is performed by another component,
+for example a web application that authenticates its end users:
+```CSharp
+// authenticate with an access token obtained elsewhere
+sharpBucket.OAuth2BearerToken(accessToken);
+```
+That token is sent as is, and is never refreshed. Call the method again with the new access token
+once the current one has expired.
+
 ## How much of the API is covered?
 SharpBucket does not yet supply complete coverage of the API. However, the main functionality is [covered](https://github.com/MitjaBezensek/SharpBucket/blob/master/Coverage.md) and the remainder of the API should become covered sooner or later.
 

@@ -76,5 +76,16 @@ namespace SharpBucket
         /// <param name="consumerSecretKey"></param>
         /// <returns></returns>
         void OAuth2ClientCredentials(string consumerKey, string consumerSecretKey);
+
+        /// <summary>
+        /// Use an OAuth2 access token that has already been obtained by other means, for example
+        /// by an authorization code grant performed by another component.
+        /// </summary>
+        /// <remarks>
+        /// The token is sent as is in an Authorization Bearer header, and is never refreshed.
+        /// Call this method again with the new access token once the current one has expired.
+        /// </remarks>
+        /// <param name="accessToken">A valid OAuth2 access token.</param>
+        void OAuth2BearerToken(string accessToken);
     }
 }
