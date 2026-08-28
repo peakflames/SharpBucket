@@ -123,6 +123,20 @@ namespace SharpBucket
         }
 
         /// <summary>
+        /// Use an OAuth2 access token that has already been obtained by other means, for example
+        /// by an authorization code grant performed by another component.
+        /// </summary>
+        /// <remarks>
+        /// The token is sent as is in an Authorization Bearer header, and is never refreshed.
+        /// Call this method again with the new access token once the current one has expired.
+        /// </remarks>
+        /// <param name="accessToken">A valid OAuth2 access token.</param>
+        public void OAuth2BearerToken(string accessToken)
+        {
+            authenticator = new OAuth2BearerAuthentication(accessToken, BaseUrl) { RequestExecutor = this.RequestExecutor };
+        }
+
+        /// <summary>
         /// Allows the use of a mock IRestClient, for testing.
         /// </summary>
         /// <param name="client"></param>
