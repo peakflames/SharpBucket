@@ -5,7 +5,7 @@
     <TargetFrameworks>net452;netstandard2.0;netstandard2.1</TargetFrameworks>
     <LangVersion>8.0</LangVersion>
     <PackageId>Peakflames.SharpBucket</PackageId>
-    <Version>0.18.0</Version>
+    <Version>0.19.0</Version>
     <Authors>Mitja Bezenšek, Mickaël Nivet, Peakflames</Authors>
     <Company>Peakflames</Company>
     <Product>SharpBucket (peakflames fork)</Product>

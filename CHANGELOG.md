@@ -1,3 +1,7 @@
+## 0.19.0
+
+- TBD
+
 ## 0.18.0
 
 - Added `OAuth2BearerToken(accessToken)` and `OAuth2BearerAuthentication`, to authenticate with an OAuth2 access token that has already been obtained by other means. Unlike `OAuth2ClientCredentials`, the token is never refreshed: the caller owns the token lifecycle.
