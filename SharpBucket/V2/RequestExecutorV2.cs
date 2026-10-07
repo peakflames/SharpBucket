@@ -42,11 +42,8 @@ namespace SharpBucket.V2
                 type = "Undefined",
                 error = new Error
                 {
-                    message = !string.IsNullOrWhiteSpace(response.Content)
-                        ? response.Content
-                        : !string.IsNullOrWhiteSpace(response.StatusDescription)
-                            ? response.StatusDescription
-                            : response.StatusCode.ToString()
+                    // Never use the content here: it is not a Bitbucket error, so it may come from another server
+                    message = DescribeStatus(response)
                 }
             };
         }

@@ -30,7 +30,7 @@ namespace SharpBucketTests.Authentication
                         {"bad_search_query", "string"},
                     }),
                 "Using a bad query should produce a BitbucketException, since it's Bitbucket that detected the error and reported it to us.'");
-            exception.Message.ShouldBe("{\"type\": \"error\", \"error\": {\"message\": \"You must provide a search query\"}}");
+            exception.Message.ShouldBe("400 Bad Request");
         }
 
         [Test]
