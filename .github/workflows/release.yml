@@ -106,6 +106,18 @@ jobs:
           git push origin "v${NEW_VERSION}"
         fi
 
+    - name: Merge main back into develop
+      env:
+        NEW_VERSION: ${{ inputs.new_version }}
+      run: |
+        git checkout develop
+        if git merge-base --is-ancestor main develop; then
+          echo "main already merged into develop, skipping."
+        else
+          git merge main --no-ff -m "Merge main into develop after v${NEW_VERSION} release"
+          git push origin develop
+        fi
+
     - name: Bump develop to next dev version
       env:
         NEXT_DEV_VERSION: ${{ inputs.next_dev_version }}

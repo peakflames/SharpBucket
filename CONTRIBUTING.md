@@ -88,9 +88,10 @@ Releases are self-service via GitHub Actions.
 4. Commits and pushes the release changes to `develop`
 5. Merges `develop → main` (no fast-forward)
 6. Creates and pushes tag `vX.Y.Z`
-7. Bumps `develop` to `next_dev_version` with a `- TBD` changelog placeholder
-8. Packs the NuGet package (`.nupkg` and `.snupkg`) and publishes both to NuGet.org
-9. Creates a GitHub Release
+7. Merges `main` back into `develop` (no fast-forward) so the release merge commit is in `develop`'s history
+8. Bumps `develop` to `next_dev_version` with a `- TBD` changelog placeholder
+9. Packs the NuGet package (`.nupkg` and `.snupkg`) and publishes both to NuGet.org
+10. Creates a GitHub Release
 
 The workflow is idempotent — if it fails partway through and is re-run with the same inputs, it safely skips steps that already completed.
 
@@ -100,6 +101,7 @@ After the workflow completes:
 
 - Tag `vX.Y.Z` is visible under [Releases](https://github.com/peakflames/SharpBucket/releases)
 - `develop` is bumped to `next_dev_version` with a `- TBD` placeholder in `CHANGELOG.md`
+- `main` is an ancestor of `develop`: `git merge-base --is-ancestor origin/main origin/develop` exits 0
 - Package appears on NuGet.org within a few minutes: `https://www.nuget.org/packages/Peakflames.SharpBucket/X.Y.Z`
 
 ---
