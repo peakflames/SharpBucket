@@ -27,3 +27,4 @@ _ReSharper*/
 *.nupkg
 *.snupkg
 /nuget-packages/
+tmp/
