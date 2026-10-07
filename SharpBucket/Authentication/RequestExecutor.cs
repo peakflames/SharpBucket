@@ -22,6 +22,11 @@ namespace SharpBucket.Authentication
         /// <param name="client">The client to configure.</param>
         public virtual void ConfigureRestClient(IRestClient client)
         {
+            ConfigureHandlers(client);
+        }
+
+        private static void ConfigureHandlers(IRestClient client)
+        {
             //Fixed bug that prevents RestClient for adding custom headers to the request
             //https://stackoverflow.com/questions/22229393/why-is-restsharp-addheaderaccept-application-json-to-a-list-of-item
             client.ClearHandlers();
@@ -144,7 +149,48 @@ namespace SharpBucket.Authentication
         protected virtual BitbucketException BuildBitbucketException(IRestResponse response)
         {
             // response.ErrorException is not useful for caller in that case, so it's useless to transmit it as an inner exception
-            throw new BitbucketException(response.StatusCode, response.Content);
+            return new BitbucketException(response.StatusCode, DescribeStatus(response));
+        }
+
+        /// <summary>
+        /// Describes the HTTP status of a response, without any part of its body,
+        /// since the body may come from a server which is not Bitbucket.
+        /// </summary>
+        protected static string DescribeStatus(IRestResponse response)
+        {
+            var status = ((int)response.StatusCode).ToString();
+            return string.IsNullOrWhiteSpace(response.StatusDescription)
+                ? status
+                : status + " " + response.StatusDescription;
+        }
+
+        internal enum RedirectKind
+        {
+            SameOrigin,
+            CrossOrigin,
+            Downgrade,
+        }
+
+        /// <summary>
+        /// Compares the origin (scheme, host and port) of a redirect target with the origin of the client base url.
+        /// </summary>
+        internal static RedirectKind ClassifyRedirect(Uri baseUrl, Uri target)
+        {
+            var sameScheme = string.Equals(baseUrl.Scheme, target.Scheme, StringComparison.OrdinalIgnoreCase);
+            var sameHost = string.Equals(baseUrl.Host, target.Host, StringComparison.OrdinalIgnoreCase);
+            // Uri.Port is normalized, so an explicit default port equals an implicit one
+            if (sameScheme && sameHost && baseUrl.Port == target.Port)
+            {
+                return RedirectKind.SameOrigin;
+            }
+
+            if (string.Equals(baseUrl.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(target.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+            {
+                return RedirectKind.Downgrade;
+            }
+
+            return RedirectKind.CrossOrigin;
         }
 
         private IRestRequest BuildRestRequest(string url, Method method, object body, IDictionary<string, object> requestParameters)
@@ -182,36 +228,58 @@ namespace SharpBucket.Authentication
             var result = client.Execute(request);
             if (result.StatusCode == HttpStatusCode.Redirect)
             {
-                request = BuildRedirectedRestRequest(request, client, result);
-                result = client.Execute(request);
+                request = BuildRedirectedRestRequest(request, client, result, out var redirectClient);
+                result = redirectClient.Execute(request);
             }
 
             return result;
         }
 
-        private static async Task<IRestResponse>ExecuteRequestWithManualFollowRedirectAsync(IRestRequest request, IRestClient client, CancellationToken token)
+        private static async Task<IRestResponse> ExecuteRequestWithManualFollowRedirectAsync(IRestRequest request, IRestClient client, CancellationToken token)
         {
             var result = await client.ExecuteAsync(request, token);
             if (result.StatusCode == HttpStatusCode.Redirect)
             {
-                request = BuildRedirectedRestRequest(request, client, result);
-                result = await client.ExecuteAsync(request, token);
+                request = BuildRedirectedRestRequest(request, client, result, out var redirectClient);
+                result = await redirectClient.ExecuteAsync(request, token);
             }
 
             return result;
         }
 
-        private static IRestRequest BuildRedirectedRestRequest<TRestResponse>(IRestRequest request, IRestClient client,
-            TRestResponse result) where TRestResponse : IRestResponse
+        /// <summary>
+        /// Builds the request that follows a redirect, and selects the client that must execute it.
+        /// The authenticated client is only used when the redirect stays on the same origin.
+        /// </summary>
+        private static IRestRequest BuildRedirectedRestRequest(IRestRequest request, IRestClient client,
+            IRestResponse result, out IRestClient redirectClient)
         {
-            var redirectUrl = GetRedirectUrl(result, client.BaseUrl.ToString());
+            var target = GetRedirectTarget(result, client.BaseUrl);
 
-            NameValueCollection queryValues;
-            if (redirectUrl.Contains("?"))
+            switch (ClassifyRedirect(client.BaseUrl, target))
             {
-                var urlAndQuery = redirectUrl.Split('?');
-                redirectUrl = urlAndQuery[0];
-                queryValues = HttpUtility.ParseQueryString(urlAndQuery[1]);
+                case RedirectKind.SameOrigin:
+                    redirectClient = client;
+                    return BuildSameOriginRestRequest(request, StripBaseUrl(target.OriginalString, client.BaseUrl.ToString()));
+                case RedirectKind.CrossOrigin:
+                    // The authenticator of the client must not be applied to another origin, so use a client without it.
+                    // Such a redirect typically is authenticated by its own query string (a presigned url),
+                    // which must reach the target unchanged: use the url as is, instead of parsing and encoding its query again.
+                    redirectClient = CreateAnonymousRedirectClient(client);
+                    return new RestRequest(target.OriginalString, request.Method);
+                default:
+                    throw new BitbucketException(HttpStatusCode.Redirect, "Refused to follow a redirect from HTTPS to HTTP.");
+            }
+        }
+
+        private static IRestRequest BuildSameOriginRestRequest(IRestRequest request, string redirectUrl)
+        {
+            NameValueCollection queryValues;
+            var queryIndex = redirectUrl.IndexOf('?');
+            if (queryIndex >= 0)
+            {
+                queryValues = HttpUtility.ParseQueryString(redirectUrl.Substring(queryIndex + 1));
+                redirectUrl = redirectUrl.Substring(0, queryIndex);
             }
             else
             {
@@ -227,9 +295,29 @@ namespace SharpBucket.Authentication
             return request;
         }
 
-        private static string GetRedirectUrl(IRestResponse result, string requestBaseUrl)
+        private static IRestClient CreateAnonymousRedirectClient(IRestClient original)
         {
-            var redirectUrl = result.Headers.Where(header => header.Name == "Location").Select(header => header.Value).First().ToString();
+            // Only copy the settings that are about reaching the network, never the authenticator,
+            // the default parameters or the cookies of the original client.
+            var client = new RestClient
+            {
+                Timeout = original.Timeout,
+                ReadWriteTimeout = original.ReadWriteTimeout,
+                Proxy = original.Proxy,
+                UserAgent = original.UserAgent,
+            };
+            ConfigureHandlers(client);
+            return client;
+        }
+
+        private static Uri GetRedirectTarget(IRestResponse result, Uri requestBaseUrl)
+        {
+            var location = result.Headers.Where(header => header.Name == "Location").Select(header => header.Value).First().ToString();
+            return new Uri(requestBaseUrl, location);
+        }
+
+        private static string StripBaseUrl(string redirectUrl, string requestBaseUrl)
+        {
             if (redirectUrl.StartsWith(requestBaseUrl))
             {
                 redirectUrl = redirectUrl.Remove(0, requestBaseUrl.Length);
