@@ -1,3 +1,7 @@
+## 0.19.1
+
+- TBD
+
 ## 0.19.0
 
 - **Breaking Change**: Exception messages for non-Bitbucket error responses now contain the HTTP status instead of the raw response body.
