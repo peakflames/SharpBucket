@@ -1,6 +1,8 @@
 ## 0.19.0
 
-- TBD
+- **Breaking Change**: Exception messages for non-Bitbucket error responses now contain the HTTP status instead of the raw response body.
+- **Breaking Change**: Files whose names contain `?` or `#` now throw an `ArgumentException` instead of producing a wrong request.
+- Security: authentication headers are no longer sent to a different origin when following a redirect. Redirects from HTTPS to HTTP are refused. Path segments containing dot-segments, `?`, `#`, or `\` are rejected.
 
 ## 0.18.0
 
